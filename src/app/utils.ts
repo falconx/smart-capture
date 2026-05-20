@@ -52,13 +52,13 @@ export const checkDocumentInFrame = (
   guideX: number,
   guideY: number,
   guideW: number,
-  guideH: number
+  guideH: number,
 ) => {
   const gray = new cv.Mat();
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
   const edges = new cv.Mat();
-  cv.Canny(gray, edges, 75, 200);
+  cv.Canny(gray, edges, 50, 150);
 
   const contours = new cv.MatVector();
   const hierarchy = new cv.Mat();
@@ -67,24 +67,36 @@ export const checkDocumentInFrame = (
     contours,
     hierarchy,
     cv.RETR_EXTERNAL,
-    cv.CHAIN_APPROX_SIMPLE
+    cv.CHAIN_APPROX_SIMPLE,
   );
 
   let found = false;
+  const minArea = 3000; // Reduced from 5000 to be less strict
 
   for (let i = 0; i < contours.size(); i++) {
     const cnt = contours.get(i);
-    const approx = new cv.Mat();
-    cv.approxPolyDP(cnt, approx, 0.02 * cv.arcLength(cnt, true), true);
+    const area = cv.contourArea(cnt);
 
-    if (approx.rows === 4 && cv.contourArea(approx) > 5000) {
+    // Skip small contours
+    if (area < minArea) {
+      continue;
+    }
+
+    const approx = new cv.Mat();
+    const epsilon = 0.02 * cv.arcLength(cnt, true);
+    cv.approxPolyDP(cnt, approx, epsilon, true);
+
+    // Look for 4-sided polygons (rectangles)
+    if (approx.rows === 4) {
       const rect = cv.boundingRect(approx);
 
+      // Check if rectangle is within guide bounds with some tolerance
+      const tolerance = 20;
       if (
-        rect.x > guideX &&
-        rect.y > guideY &&
-        rect.x + rect.width < guideX + guideW &&
-        rect.y + rect.height < guideY + guideH
+        rect.x >= guideX - tolerance &&
+        rect.y >= guideY - tolerance &&
+        rect.x + rect.width <= guideX + guideW + tolerance &&
+        rect.y + rect.height <= guideY + guideH + tolerance
       ) {
         found = true;
         approx.delete();

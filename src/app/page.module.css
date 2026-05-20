@@ -16,10 +16,6 @@
   display: none;
 }
 
-.video {
-  transform: scaleX(-1);
-}
-
 .overlay {
   position: absolute;
   top: 0;
@@ -30,6 +26,11 @@
 
 .capturedImage {
   margin: .5rem 0 1rem;
+}
+
+.video,
+.capturedImage {
+  transform: scaleX(-1);
 }
 
 .indicators {
@@ -53,4 +54,17 @@
 .captureControls {
   display: flex;
   gap: .5rem;
+}
+
+.error {
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #fee;
+  border: 1px solid #fcc;
+  border-radius: .25rem;
+  color: #c00;
+}
+
+.error p {
+  margin: 0;
 }
