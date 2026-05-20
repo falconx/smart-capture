@@ -256,6 +256,8 @@ const IdentityUpload: FC = () => {
     { name: "In Frame", value: isDocumentInFrame },
   ];
 
+  const isInitialising = status === Status.Initialising;
+
   return (
     <>
       <Script
@@ -263,6 +265,13 @@ const IdentityUpload: FC = () => {
         strategy="beforeInteractive"
         onError={() => setError("Failed to load OpenCV library")}
       />
+
+      <header className={styles.header}>
+        <h1 className={styles.title}>Smart Document Capture</h1>
+        <p className={styles.subtitle}>
+          Position your document within the guide for automatic capture
+        </p>
+      </header>
 
       {error && (
         <div className={styles.error}>
@@ -281,26 +290,28 @@ const IdentityUpload: FC = () => {
         />
         <canvas ref={canvasRef} className={styles.canvas} />
         <canvas ref={overlayRef} className={styles.overlay} />
+
+        {status !== Status.Initialising && !capturedImage && (
+          <ul className={styles.indicators}>
+            {indicators.map(({ name, value }) => (
+              <li
+                key={name}
+                className={[
+                  styles.indicator,
+                  value ? styles.indicatorGood : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {status === Status.Initialising && !error && <p>Loading...</p>}
-
-      {status !== Status.Initialising && !capturedImage && (
-        <ul className={styles.indicators}>
-          {indicators.map(({ name, value }) => (
-            <li
-              key={name}
-              className={[
-                styles.indicator,
-                value ? styles.indicatorGood : undefined,
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              {name}
-            </li>
-          ))}
-        </ul>
+      {status === Status.Initialising && !error && (
+        <p className={styles.loading}>Loading camera and computer vision...</p>
       )}
 
       {capturedImage && (
@@ -314,33 +325,35 @@ const IdentityUpload: FC = () => {
         </>
       )}
 
-      <div className={styles.captureControls}>
-        {!capturedImage ? (
-          <>
-            <button type="button" onClick={capture}>
-              Manual capture
-            </button>
+      {!isInitialising && (
+        <div className={styles.captureControls}>
+          {!capturedImage ? (
+            <>
+              <button type="button" onClick={capture}>
+                Manual capture
+              </button>
 
-            <label>
-              Enable auto capture
-              <input
-                type="checkbox"
-                checked={enableAutoCapture}
-                onChange={(e) => setEnableAutoCapture(e.target.checked)}
-              />
-            </label>
-          </>
-        ) : (
-          <>
-            <button type="button" onClick={retake}>
-              Retake
-            </button>
-            <button type="button" onClick={() => alert("Image accepted!")}>
-              Use this photo
-            </button>
-          </>
-        )}
-      </div>
+              <label>
+                Enable auto capture
+                <input
+                  type="checkbox"
+                  checked={enableAutoCapture}
+                  onChange={(e) => setEnableAutoCapture(e.target.checked)}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={retake}>
+                Retake
+              </button>
+              <button type="button" onClick={() => alert("Image accepted!")}>
+                Use this photo
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </>
   );
 };
