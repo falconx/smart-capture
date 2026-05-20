@@ -45,11 +45,41 @@ const IdentityUpload: FC = () => {
   const [error, setError] = useState<string>();
   const streamingRef = useRef(false);
   const [enableAutoCapture, setEnableAutoCapture] = useState(true);
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
+    [],
+  );
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+  const [isFrontCamera, setIsFrontCamera] = useState(false);
 
   const [isSharp, setIsSharp] = useState(false);
   const [hasGlare, setHasGlare] = useState(false);
   const [hasGoodLighting, setHasGoodLighting] = useState(false);
   const [isDocumentInFrame, setIsDocumentInFrame] = useState(false);
+
+  // Enumerate available cameras
+  useEffect(() => {
+    const enumerateCameras = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(
+          (device) => device.kind === "videoinput",
+        );
+        setAvailableCameras(videoDevices);
+
+        // Set default camera (prefer rear camera on mobile)
+        if (videoDevices.length > 0 && !selectedCameraId) {
+          const rearCamera = videoDevices.find((device) =>
+            device.label.toLowerCase().includes("back"),
+          );
+          setSelectedCameraId(rearCamera?.deviceId || videoDevices[0].deviceId);
+        }
+      } catch (err) {
+        console.error("Error enumerating cameras:", err);
+      }
+    };
+
+    enumerateCameras();
+  }, [selectedCameraId]);
 
   // Create overlay image once on mount
   useEffect(() => {
@@ -86,16 +116,49 @@ const IdentityUpload: FC = () => {
       return;
     }
 
-    // Request camera with rear camera preference for mobile
+    // Don't start camera until we have a selected camera ID
+    if (!selectedCameraId) return;
+
+    // Stop existing stream before starting new one
+    if (video.srcObject) {
+      const stream = video.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+    }
+
+    // Request camera with specific device ID
+    const constraints: MediaStreamConstraints = {
+      video: {
+        deviceId: { exact: selectedCameraId },
+      },
+    };
+
     navigator.mediaDevices
-      .getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-        },
-      })
+      .getUserMedia(constraints)
       .then((stream) => {
         video.srcObject = stream;
         setError(undefined);
+
+        // Detect if this is a front-facing camera
+        const videoTrack = stream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+        const facingMode = settings.facingMode;
+
+        // Check if it's a front camera by facingMode or label
+        const selectedCamera = availableCameras.find(
+          (cam) => cam.deviceId === selectedCameraId,
+        );
+
+        const label = selectedCamera?.label.toLowerCase() || "";
+        const isFront =
+          facingMode === "user" ||
+          label.includes("front") ||
+          label.includes("user") ||
+          label.includes("facetime") ||
+          (!label.includes("back") &&
+            !label.includes("rear") &&
+            !label.includes("environment"));
+
+        setIsFrontCamera(!!isFront);
       })
       .catch((err) => {
         console.error("Camera access error:", err);
@@ -125,7 +188,7 @@ const IdentityUpload: FC = () => {
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [selectedCameraId]);
 
   const capture = () => {
     const canvas = canvasRef.current;
@@ -285,7 +348,7 @@ const IdentityUpload: FC = () => {
           autoPlay
           muted
           playsInline
-          className={styles.video}
+          className={`${styles.video} ${isFrontCamera ? styles.videoMirrored : ""}`}
           onLoadedData={onLoadedData}
         />
         <canvas ref={canvasRef} className={styles.canvas} />
@@ -318,7 +381,7 @@ const IdentityUpload: FC = () => {
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            className={styles.capturedImage}
+            className={`${styles.capturedImage} ${isFrontCamera ? styles.capturedImageMirrored : ""}`}
             src={capturedImage}
             alt="captured image"
           />
@@ -329,11 +392,25 @@ const IdentityUpload: FC = () => {
         <div className={styles.captureControls}>
           {!capturedImage ? (
             <>
+              <label className={styles.cameraSelector}>
+                {/* Camera */}
+                <select
+                  value={selectedCameraId}
+                  onChange={(e) => setSelectedCameraId(e.target.value)}
+                >
+                  {availableCameras.map((camera) => (
+                    <option key={camera.deviceId} value={camera.deviceId}>
+                      {camera.label || `Camera ${camera.deviceId.slice(0, 8)}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <button type="button" onClick={capture}>
                 Manual capture
               </button>
 
-              <label>
+              <label className={styles.autoCapture}>
                 Enable auto capture
                 <input
                   type="checkbox"

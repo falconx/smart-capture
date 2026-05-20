@@ -42,8 +42,11 @@
 }
 
 .video {
-  transform: scaleX(-1);
   background: #000;
+}
+
+.videoMirrored {
+  transform: scaleX(-1);
 }
 
 .overlay {
@@ -60,6 +63,9 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   max-width: 640px;
   width: 100%;
+}
+
+.capturedImageMirrored {
   transform: scaleX(-1);
 }
 
@@ -109,6 +115,7 @@
 .captureControls {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 0.75rem;
   margin-top: 1.5rem;
 }
@@ -152,7 +159,7 @@
   transform: scale(0.98);
 }
 
-.captureControls label {
+.captureControls label.autoCapture {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -165,7 +172,7 @@
   transition: background-color 0.2s ease;
 }
 
-.captureControls label:hover {
+.captureControls label.autoCapture:hover {
   background-color: #e5e7eb;
 }
 
@@ -174,6 +181,27 @@
   height: 1.125rem;
   cursor: pointer;
   accent-color: #3b82f6;
+}
+
+.cameraSelector select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.cameraSelector select:hover {
+  border-color: #3b82f6;
+}
+
+.cameraSelector select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .error {
@@ -223,6 +251,21 @@
 
   .captureControls label:hover {
     background-color: #4b5563;
+  }
+
+  .cameraSelector {
+    background-color: #374151;
+    color: #f9fafb;
+  }
+
+  .cameraSelector select {
+    background-color: #1f2937;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
+  .cameraSelector select:hover {
+    border-color: #3b82f6;
   }
 
   .error {
