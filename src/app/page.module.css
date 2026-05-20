@@ -227,6 +227,44 @@
   font-size: 0.9375rem;
 }
 
+.countdownOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.countdownNumber {
+  font-size: 8rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  animation: countdownPulse 1s ease-in-out;
+}
+
+@keyframes countdownPulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .title {
     color: #f9fafb;
@@ -301,5 +339,9 @@
   .captureControls label {
     width: 100%;
     justify-content: center;
+  }
+
+  .countdownNumber {
+    font-size: 6rem;
   }
 }

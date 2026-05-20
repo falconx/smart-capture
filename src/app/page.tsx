@@ -55,6 +55,8 @@ const IdentityUpload: FC = () => {
   const [hasGlare, setHasGlare] = useState(false);
   const [hasGoodLighting, setHasGoodLighting] = useState(false);
   const [isDocumentInFrame, setIsDocumentInFrame] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [countdownComplete, setCountdownComplete] = useState(false);
 
   // Enumerate available cameras
   useEffect(() => {
@@ -204,6 +206,8 @@ const IdentityUpload: FC = () => {
   const retake = () => {
     setCapturedImage(undefined);
     setStatus(Status.CapturingFront);
+    setCountdownComplete(false);
+    setCountdown(3);
     streamingRef.current = true;
 
     // Restart the video processing
@@ -224,6 +228,11 @@ const IdentityUpload: FC = () => {
     const overlayCtx = overlay.getContext("2d");
 
     if (!ctx || !overlayCtx) return;
+
+    // Start initial countdown when video loads
+    if (countdown === null && !countdownComplete) {
+      setCountdown(3);
+    }
 
     const processFrame = () => {
       if (video.videoWidth === 0 || video.videoHeight === 0) return;
@@ -288,7 +297,8 @@ const IdentityUpload: FC = () => {
 
       setStatus(Status.CapturingFront);
 
-      if (pass && enableAutoCapture) {
+      // Only allow auto-capture after initial countdown is complete
+      if (pass && enableAutoCapture && countdownComplete) {
         capture();
       }
 
@@ -311,6 +321,23 @@ const IdentityUpload: FC = () => {
 
     runChecks();
   };
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (countdown === null) return;
+
+    if (countdown === 0) {
+      setCountdown(null);
+      setCountdownComplete(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCountdown(countdown - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   const indicators: Indicator[] = [
     { name: "Sharp", value: isSharp },
@@ -353,6 +380,12 @@ const IdentityUpload: FC = () => {
         />
         <canvas ref={canvasRef} className={styles.canvas} />
         <canvas ref={overlayRef} className={styles.overlay} />
+
+        {countdown !== null && countdown > 0 && (
+          <div className={styles.countdownOverlay}>
+            <div className={styles.countdownNumber}>{countdown}</div>
+          </div>
+        )}
 
         {status !== Status.Initialising && !capturedImage && (
           <ul className={styles.indicators}>
