@@ -9,6 +9,7 @@ import {
   checkGlare,
   checkDocumentInFrame,
 } from "./utils";
+import { DocumentDetector } from "./yolo-detector";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const cv: any;
@@ -59,6 +60,8 @@ const IdentityUpload: FC = () => {
   const [countdownComplete, setCountdownComplete] = useState(false);
   const countdownCompleteRef = useRef(false);
   const lastCaptureAttemptRef = useRef<number>(0);
+  const detectorRef = useRef<DocumentDetector | null>(null);
+  const [isModelLoading, setIsModelLoading] = useState(true);
 
   // Enumerate available cameras
   useEffect(() => {
@@ -84,6 +87,26 @@ const IdentityUpload: FC = () => {
 
     enumerateCameras();
   }, [selectedCameraId]);
+
+  // Initialize YOLO detector
+  useEffect(() => {
+    const initDetector = async () => {
+      try {
+        setIsModelLoading(true);
+        const detector = new DocumentDetector();
+        await detector.initialize();
+        detectorRef.current = detector;
+        setIsModelLoading(false);
+        console.log("Document detector initialized");
+      } catch (error) {
+        console.error("Failed to initialize document detector:", error);
+        setError("Failed to load document detection model");
+        setIsModelLoading(false);
+      }
+    };
+
+    initDetector();
+  }, []);
 
   // Create overlay image once on mount
   useEffect(() => {
@@ -259,7 +282,7 @@ const IdentityUpload: FC = () => {
       setCountdown(3);
     }
 
-    const processFrame = () => {
+    const processFrame = async () => {
       if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
       canvas.width = video.videoWidth;
@@ -282,13 +305,6 @@ const IdentityUpload: FC = () => {
         );
       }
 
-      // Calculate guide box dimensions
-      const boxMargin = 40;
-      const boxWidth = canvas.width - boxMargin * 2;
-      const boxHeight = boxWidth / 1.58;
-      const boxX = boxMargin;
-      const boxY = (canvas.height - boxHeight) / 2;
-
       // Check if OpenCV is loaded
       if (typeof cv === "undefined" || !cv.imread) {
         return;
@@ -296,17 +312,17 @@ const IdentityUpload: FC = () => {
 
       const src = cv.imread(canvas);
 
+      // Check document in frame using YOLO detector
+      const docInFrame = await checkDocumentInFrame(
+        canvas,
+        detectorRef.current,
+      );
+
       const quality = {
         isSharp: checkBlur(src),
         hasGoodLighting: checkLighting(src),
         hasGlare: checkGlare(src),
-        isDocumentInFrame: checkDocumentInFrame(
-          src,
-          boxX,
-          boxY,
-          boxWidth,
-          boxHeight,
-        ),
+        isDocumentInFrame: docInFrame,
       };
 
       setIsSharp(quality.isSharp);
@@ -433,8 +449,12 @@ const IdentityUpload: FC = () => {
         )}
       </div>
 
-      {status === Status.Initialising && !error && (
-        <p className={styles.loading}>Loading camera and computer vision...</p>
+      {(status === Status.Initialising || isModelLoading) && !error && (
+        <p className={styles.loading}>
+          {isModelLoading
+            ? "Loading document detection model..."
+            : "Loading camera and computer vision..."}
+        </p>
       )}
 
       {capturedImage && (

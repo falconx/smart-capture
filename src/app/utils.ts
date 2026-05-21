@@ -47,92 +47,21 @@ export const checkGlare = (src) => {
   return white / total > 0.05;
 };
 
-export const checkDocumentInFrame = (src, guideX, guideY, guideW, guideH) => {
-  const roiRect = new cv.Rect(guideX, guideY, guideW, guideH);
+import { DocumentDetector } from "./yolo-detector";
 
-  const roi = src.roi(roiRect);
-
-  const gray = new cv.Mat();
-  cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY);
-
-  const blurred = new cv.Mat();
-  cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-
-  const thresh = new cv.Mat();
-
-  cv.adaptiveThreshold(
-    blurred,
-    thresh,
-    255,
-    cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-    cv.THRESH_BINARY,
-    11,
-    2,
-  );
-
-  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
-
-  cv.morphologyEx(thresh, thresh, cv.MORPH_CLOSE, kernel);
-
-  const contours = new cv.MatVector();
-  const hierarchy = new cv.Mat();
-
-  cv.findContours(
-    thresh,
-    contours,
-    hierarchy,
-    cv.RETR_EXTERNAL,
-    cv.CHAIN_APPROX_SIMPLE,
-  );
-
-  let bestScore = 0;
-
-  for (let i = 0; i < contours.size(); i++) {
-    const cnt = contours.get(i);
-    const area = cv.contourArea(cnt);
-
-    if (area < 5000) {
-      continue;
-    }
-
-    const approx = new cv.Mat();
-
-    cv.approxPolyDP(cnt, approx, 0.02 * cv.arcLength(cnt, true), true);
-
-    if (approx.rows < 4 || approx.rows > 8) {
-      approx.delete();
-      continue;
-    }
-
-    const rect = cv.boundingRect(approx);
-    const aspect = rect.width / rect.height;
-    const boundingArea = rect.width * rect.height;
-    const rectangularity = area / boundingArea;
-
-    let score = 0;
-
-    if (aspect > 1.2 && aspect < 1.7) {
-      score += 3;
-    }
-
-    if (rectangularity > 0.7) {
-      score += 3;
-    }
-
-    if (area > 12000) {
-      score += 2;
-    }
-
-    bestScore = Math.max(bestScore, score);
-    approx.delete();
+export const checkDocumentInFrame = async (
+  canvas: HTMLCanvasElement,
+  detector: DocumentDetector | null,
+): Promise<boolean> => {
+  if (!detector || !detector.isInitialized()) {
+    return false;
   }
 
-  gray.delete();
-  blurred.delete();
-  thresh.delete();
-  contours.delete();
-  hierarchy.delete();
-  roi.delete();
-
-  return bestScore >= 6;
+  try {
+    const result = await detector.detect(canvas);
+    return result.detected && result.confidence > 0.5;
+  } catch (error) {
+    console.error("Document detection error:", error);
+    return false;
+  }
 };
