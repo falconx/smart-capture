@@ -57,6 +57,8 @@ const IdentityUpload: FC = () => {
   const [isDocumentInFrame, setIsDocumentInFrame] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [countdownComplete, setCountdownComplete] = useState(false);
+  const countdownCompleteRef = useRef(false);
+  const lastCaptureAttemptRef = useRef<number>(0);
 
   // Enumerate available cameras
   useEffect(() => {
@@ -197,17 +199,40 @@ const IdentityUpload: FC = () => {
 
     if (!canvas) return;
 
+    // Prevent capture if already captured
+    if (capturedImage) {
+      return;
+    }
+
+    // Throttle capture calls to prevent rapid successive captures
+    const now = Date.now();
+    const timeSinceLastCapture = now - lastCaptureAttemptRef.current;
+
+    // Require at least 500ms between capture attempts
+    if (timeSinceLastCapture < 500) {
+      return;
+    }
+
+    lastCaptureAttemptRef.current = now;
+
+    console.log("capture");
+
+    // Stop streaming immediately to prevent further captures
+    streamingRef.current = false;
+
     const base64 = canvas.toDataURL("image/jpeg");
     setCapturedImage(base64);
     setStatus(Status.CapturedFront);
-    streamingRef.current = false;
   };
 
   const retake = () => {
     setCapturedImage(undefined);
     setStatus(Status.CapturingFront);
-    setCountdownComplete(false);
-    setCountdown(3);
+    // Reset the last capture timestamp to allow immediate capture if needed
+    lastCaptureAttemptRef.current = 0;
+    // setCountdownComplete(false);
+    // countdownCompleteRef.current = false;
+    // setCountdown(null);
     streamingRef.current = true;
 
     // Restart the video processing
@@ -298,7 +323,8 @@ const IdentityUpload: FC = () => {
       setStatus(Status.CapturingFront);
 
       // Only allow auto-capture after initial countdown is complete
-      if (pass && enableAutoCapture && countdownComplete) {
+      // The capture function now has built-in throttling
+      if (pass && enableAutoCapture && countdownCompleteRef.current) {
         capture();
       }
 
@@ -329,6 +355,7 @@ const IdentityUpload: FC = () => {
     if (countdown === 0) {
       setCountdown(null);
       setCountdownComplete(true);
+      countdownCompleteRef.current = true;
       return;
     }
 

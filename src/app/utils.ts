@@ -47,69 +47,92 @@ export const checkGlare = (src) => {
   return white / total > 0.05;
 };
 
-export const checkDocumentInFrame = (
-  src,
-  guideX: number,
-  guideY: number,
-  guideW: number,
-  guideH: number,
-) => {
-  const gray = new cv.Mat();
-  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+export const checkDocumentInFrame = (src, guideX, guideY, guideW, guideH) => {
+  const roiRect = new cv.Rect(guideX, guideY, guideW, guideH);
 
-  const edges = new cv.Mat();
-  cv.Canny(gray, edges, 50, 150);
+  const roi = src.roi(roiRect);
+
+  const gray = new cv.Mat();
+  cv.cvtColor(roi, gray, cv.COLOR_RGBA2GRAY);
+
+  const blurred = new cv.Mat();
+  cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+
+  const thresh = new cv.Mat();
+
+  cv.adaptiveThreshold(
+    blurred,
+    thresh,
+    255,
+    cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+    cv.THRESH_BINARY,
+    11,
+    2,
+  );
+
+  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+
+  cv.morphologyEx(thresh, thresh, cv.MORPH_CLOSE, kernel);
 
   const contours = new cv.MatVector();
   const hierarchy = new cv.Mat();
+
   cv.findContours(
-    edges,
+    thresh,
     contours,
     hierarchy,
     cv.RETR_EXTERNAL,
     cv.CHAIN_APPROX_SIMPLE,
   );
 
-  let found = false;
-  const minArea = 3000; // Reduced from 5000 to be less strict
+  let bestScore = 0;
 
   for (let i = 0; i < contours.size(); i++) {
     const cnt = contours.get(i);
     const area = cv.contourArea(cnt);
 
-    // Skip small contours
-    if (area < minArea) {
+    if (area < 5000) {
       continue;
     }
 
     const approx = new cv.Mat();
-    const epsilon = 0.02 * cv.arcLength(cnt, true);
-    cv.approxPolyDP(cnt, approx, epsilon, true);
 
-    // Look for 4-sided polygons (rectangles)
-    if (approx.rows === 4) {
-      const rect = cv.boundingRect(approx);
+    cv.approxPolyDP(cnt, approx, 0.02 * cv.arcLength(cnt, true), true);
 
-      // Check if rectangle is within guide bounds with some tolerance
-      const tolerance = 20;
-      if (
-        rect.x >= guideX - tolerance &&
-        rect.y >= guideY - tolerance &&
-        rect.x + rect.width <= guideX + guideW + tolerance &&
-        rect.y + rect.height <= guideY + guideH + tolerance
-      ) {
-        found = true;
-        approx.delete();
-        break;
-      }
+    if (approx.rows < 4 || approx.rows > 8) {
+      approx.delete();
+      continue;
     }
 
+    const rect = cv.boundingRect(approx);
+    const aspect = rect.width / rect.height;
+    const boundingArea = rect.width * rect.height;
+    const rectangularity = area / boundingArea;
+
+    let score = 0;
+
+    if (aspect > 1.2 && aspect < 1.7) {
+      score += 3;
+    }
+
+    if (rectangularity > 0.7) {
+      score += 3;
+    }
+
+    if (area > 12000) {
+      score += 2;
+    }
+
+    bestScore = Math.max(bestScore, score);
     approx.delete();
   }
 
   gray.delete();
-  edges.delete();
+  blurred.delete();
+  thresh.delete();
   contours.delete();
   hierarchy.delete();
-  return found;
+  roi.delete();
+
+  return bestScore >= 6;
 };
