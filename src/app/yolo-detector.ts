@@ -21,7 +21,7 @@ export class DocumentDetector {
   private confidenceThreshold = 0.5;
   private iouThreshold = 0.45;
 
-  constructor(modelPath: string = "/models/yolov8n.onnx") {
+  constructor(modelPath: string = "/models/document-detector-2.onnx") {
     this.modelPath = modelPath;
   }
 
@@ -142,8 +142,8 @@ export class DocumentDetector {
   ): Detection[] {
     const detections: Detection[] = [];
 
-    // YOLOv8 output format: [1, 84, 8400]
-    // 84 = 4 bbox coords + 80 class scores
+    // YOLOv8-OBB output format: [1, 5, 8400]
+    // 5 = 4 bbox coords + 1 class score (passport)
     const data = output.data;
     const numDetections = output.dims[2]; // 8400
 
@@ -158,7 +158,7 @@ export class DocumentDetector {
       let maxScore = 0;
       let maxClass = 0;
 
-      for (let c = 0; c < 80; c++) {
+      for (let c = 0; c < 1; c++) {
         const score = data[(4 + c) * numDetections + i];
         if (score > maxScore) {
           maxScore = score;
@@ -216,22 +216,9 @@ export class DocumentDetector {
         canvas.height,
       );
 
-      // For document detection, accept document-related classes from COCO dataset:
-      // - Class 73: book (works for documents, passports, papers)
-      // - Class 84: book (alternative, if exists in model)
-      // Explicitly EXCLUDE common false positives:
-      // - Class 0: person (faces, bodies)
-      // - Class 67: cell phone
-      // - Class 63: laptop
-      // - Class 64: mouse
-      // - Class 66: keyboard
-      const excludedClasses = [0, 63, 64, 66, 67]; // person, laptop, mouse, keyboard, cell phone
-
+      // Filter for passport class (class 0) with confidence threshold
       const documentDetections = detections.filter(
-        (det) =>
-          (det.class === 73 || det.class === 84) && // book classes
-          !excludedClasses.includes(det.class) &&
-          det.confidence > 0.6,
+        (det) => det.class === 0 && det.confidence > 0.5,
       );
 
       console.log(

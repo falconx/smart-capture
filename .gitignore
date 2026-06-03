@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -24,6 +22,9 @@
 .DS_Store
 *.pem
 
+# editor
+.vscode/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -39,5 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# ONNX models (large files)
-public/models/*.onnx
+# training datasets
+data/
+datasets/
+
+# yolo training outputs
+runs/
+
+# downloaded base models
+yolov8*.pt

@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "split-dataset": "./scripts/split-dataset.sh"
   },
   "dependencies": {
     "next": "16.2.6",
