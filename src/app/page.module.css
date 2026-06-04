@@ -265,6 +265,41 @@
   }
 }
 
+.stabilityIndicator {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-align: center;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+
+.stabilityProgress {
+  width: 200px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.stabilityBar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #22c55e);
+  transition: width 0.1s ease-out;
+}
+
+.stabilityText {
+  color: white;
+  font-size: 14px;
+  margin: 0;
+  font-weight: 500;
+}
+
 @media (prefers-color-scheme: dark) {
   .title {
     color: #f9fafb;

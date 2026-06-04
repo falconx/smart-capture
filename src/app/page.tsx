@@ -62,6 +62,8 @@ const IdentityUpload: FC = () => {
   const lastCaptureAttemptRef = useRef<number>(0);
   const detectorRef = useRef<DocumentDetector | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
+  const REQUIRED_STABLE_FRAMES = 5;
+  const [consecutiveGoodFrames, setConsecutiveGoodFrames] = useState(0);
 
   // Enumerate available cameras
   useEffect(() => {
@@ -243,6 +245,9 @@ const IdentityUpload: FC = () => {
     // Stop streaming immediately to prevent further captures
     streamingRef.current = false;
 
+    // Reset the consecutive frames counter
+    setConsecutiveGoodFrames(0);
+
     const base64 = canvas.toDataURL("image/jpeg");
     setCapturedImage(base64);
     setStatus(Status.CapturedFront);
@@ -256,6 +261,7 @@ const IdentityUpload: FC = () => {
     // setCountdownComplete(false);
     // countdownCompleteRef.current = false;
     // setCountdown(null);
+    setConsecutiveGoodFrames(0);
     streamingRef.current = true;
 
     // Restart the video processing
@@ -338,10 +344,24 @@ const IdentityUpload: FC = () => {
 
       setStatus(Status.CapturingFront);
 
-      // Only allow auto-capture after initial countdown is complete
-      // The capture function now has built-in throttling
-      if (pass && enableAutoCapture && countdownCompleteRef.current) {
-        capture();
+      // Track consecutive good frames for stability
+      if (pass) {
+        setConsecutiveGoodFrames((prev) => {
+          const newCount = prev + 1;
+
+          // Trigger capture when we reach the required frames
+          if (
+            newCount >= REQUIRED_STABLE_FRAMES &&
+            enableAutoCapture &&
+            countdownCompleteRef.current
+          ) {
+            capture();
+          }
+
+          return newCount;
+        });
+      } else {
+        setConsecutiveGoodFrames(0);
       }
 
       src.delete();
@@ -446,6 +466,22 @@ const IdentityUpload: FC = () => {
               </li>
             ))}
           </ul>
+        )}
+
+        {!capturedImage && consecutiveGoodFrames > 0 && (
+          <div className={styles.stabilityIndicator}>
+            <div className={styles.stabilityProgress}>
+              <div
+                className={styles.stabilityBar}
+                style={{
+                  width: `${(consecutiveGoodFrames / REQUIRED_STABLE_FRAMES) * 100}%`,
+                }}
+              />
+            </div>
+            <p className={styles.stabilityText}>
+              Hold steady... {consecutiveGoodFrames}/{REQUIRED_STABLE_FRAMES}
+            </p>
+          </div>
         )}
       </div>
 
