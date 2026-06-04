@@ -63,7 +63,6 @@ const IdentityUpload: FC = () => {
   const [isDocumentInFrame, setIsDocumentInFrame] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [countdownComplete, setCountdownComplete] = useState(false);
-  const countdownCompleteRef = useRef(false);
   const lastCaptureAttemptRef = useRef<number>(0);
   const detectorRef = useRef<DocumentDetector | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
@@ -75,15 +74,17 @@ const IdentityUpload: FC = () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(
-          (device) => device.kind === "videoinput",
+          ({ kind }) => kind === "videoinput",
         );
+
         setAvailableCameras(videoDevices);
 
         // Set default camera (prefer rear camera on mobile)
         if (videoDevices.length > 0 && !selectedCameraId) {
-          const rearCamera = videoDevices.find((device) =>
-            device.label.toLowerCase().includes("back"),
+          const rearCamera = videoDevices.find(({ label }) =>
+            label.toLowerCase().includes("back"),
           );
+
           setSelectedCameraId(rearCamera?.deviceId || videoDevices[0].deviceId);
         }
       } catch (err) {
@@ -118,6 +119,7 @@ const IdentityUpload: FC = () => {
     const svgBlob = new Blob([svgString], {
       type: "image/svg+xml;charset=utf-8",
     });
+
     const url = URL.createObjectURL(svgBlob);
 
     const img = new Image();
@@ -194,6 +196,7 @@ const IdentityUpload: FC = () => {
       })
       .catch((err) => {
         console.error("Camera access error:", err);
+
         if (
           err.name === "NotAllowedError" ||
           err.name === "PermissionDeniedError"
@@ -228,18 +231,14 @@ const IdentityUpload: FC = () => {
     if (!canvas) return;
 
     // Prevent capture if already captured
-    if (capturedImage) {
-      return;
-    }
+    if (capturedImage) return;
 
     // Throttle capture calls to prevent rapid successive captures
     const now = Date.now();
     const timeSinceLastCapture = now - lastCaptureAttemptRef.current;
 
     // Require at least MIN_CAPTURE_INTERVAL_MS between capture attempts
-    if (timeSinceLastCapture < MIN_CAPTURE_INTERVAL_MS) {
-      return;
-    }
+    if (timeSinceLastCapture < MIN_CAPTURE_INTERVAL_MS) return;
 
     lastCaptureAttemptRef.current = now;
 
@@ -265,11 +264,17 @@ const IdentityUpload: FC = () => {
     // Restart the video processing
     const video = videoRef.current;
     if (video && video.readyState >= 2) {
-      onLoadedData();
+      start();
     }
   };
 
-  const onLoadedData = () => {
+  const onVideoReady = () => {
+    if (countdown === null && !countdownComplete) {
+      setCountdown(INITIAL_COUNTDOWN_SECONDS);
+    }
+  };
+
+  const start = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const overlay = overlayRef.current;
@@ -280,11 +285,6 @@ const IdentityUpload: FC = () => {
     const overlayCtx = overlay.getContext("2d");
 
     if (!ctx || !overlayCtx) return;
-
-    // Start initial countdown when video loads
-    if (countdown === null && !countdownComplete) {
-      setCountdown(INITIAL_COUNTDOWN_SECONDS);
-    }
 
     const processFrame = async () => {
       if (video.videoWidth === 0 || video.videoHeight === 0) return;
@@ -310,9 +310,7 @@ const IdentityUpload: FC = () => {
       }
 
       // Check if OpenCV is loaded
-      if (typeof cv === "undefined" || !cv.imread) {
-        return;
-      }
+      if (typeof cv === "undefined" || !cv.imread) return;
 
       const src = cv.imread(canvas);
 
@@ -334,25 +332,19 @@ const IdentityUpload: FC = () => {
       setHasGlare(quality.hasGlare);
       setIsDocumentInFrame(quality.isDocumentInFrame);
 
-      const pass =
+      const checksPass =
         quality.isSharp &&
         quality.hasGoodLighting &&
         !quality.hasGlare &&
         quality.isDocumentInFrame;
 
-      setStatus(Status.CapturingFront);
-
       // Track consecutive good frames for stability
-      if (pass) {
+      if (checksPass) {
         setConsecutiveGoodFrames((prev) => {
           const newCount = prev + 1;
 
           // Trigger capture when we reach the required frames
-          if (
-            newCount >= REQUIRED_STABLE_FRAMES &&
-            enableAutoCapture &&
-            countdownCompleteRef.current
-          ) {
+          if (newCount >= REQUIRED_STABLE_FRAMES && enableAutoCapture) {
             capture();
           }
 
@@ -375,21 +367,27 @@ const IdentityUpload: FC = () => {
 
       if (!streamingRef.current) return;
 
-      processFrame();
       requestAnimationFrame(runChecks);
+      processFrame();
     };
 
+    setStatus(Status.CapturingFront);
     runChecks();
   };
 
   // Countdown timer effect
   useEffect(() => {
-    if (countdown === null) return;
+    if (countdown === null || isModelLoading) return;
+
+    // Delay start to avoid lag but start just before the countdown finishes
+    // to account for render delay
+    if (countdown === 1) {
+      start();
+    }
 
     if (countdown === 0) {
       setCountdown(null);
       setCountdownComplete(true);
-      countdownCompleteRef.current = true;
       return;
     }
 
@@ -398,7 +396,7 @@ const IdentityUpload: FC = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown]);
+  }, [countdown, setIsModelLoading]);
 
   const indicators: Indicator[] = [
     { name: "Sharp", value: isSharp },
@@ -437,7 +435,7 @@ const IdentityUpload: FC = () => {
           muted
           playsInline
           className={`${styles.video} ${isFrontCamera ? styles.videoMirrored : ""}`}
-          onLoadedData={onLoadedData}
+          onLoadedData={onVideoReady}
         />
         <canvas ref={canvasRef} className={styles.canvas} />
         <canvas ref={overlayRef} className={styles.overlay} />
