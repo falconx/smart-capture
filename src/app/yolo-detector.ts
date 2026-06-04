@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as ort from "onnxruntime-web";
+import {
+  DOCUMENT_RECOGNITION_CONFIDENCE_THRESHOLD,
+  YOLO_INPUT_SIZE,
+  YOLO_IOU_THRESHOLD,
+} from "../constants";
 
 export interface Detection {
   bbox: [number, number, number, number]; // [x, y, width, height]
@@ -17,9 +22,8 @@ export interface DetectionResult {
 export class DocumentDetector {
   private session: ort.InferenceSession | null = null;
   private modelPath: string;
-  private inputSize = 640;
-  private confidenceThreshold = 0.5;
-  private iouThreshold = 0.45;
+  private inputSize = YOLO_INPUT_SIZE;
+  private iouThreshold = YOLO_IOU_THRESHOLD;
 
   constructor(modelPath: string = "/models/document-detector-2.onnx") {
     this.modelPath = modelPath;
@@ -41,10 +45,6 @@ export class DocumentDetector {
       this.session = await ort.InferenceSession.create(modelBuffer, {
         executionProviders: ["wasm"],
       });
-
-      console.log("YOLO model loaded successfully");
-      console.log("Input names:", this.session.inputNames);
-      console.log("Output names:", this.session.outputNames);
     } catch (error) {
       console.error("Failed to load YOLO model:", error);
       throw error;
@@ -167,7 +167,7 @@ export class DocumentDetector {
       }
 
       // Filter by confidence threshold
-      if (maxScore > this.confidenceThreshold) {
+      if (maxScore > DOCUMENT_RECOGNITION_CONFIDENCE_THRESHOLD) {
         // Convert from center format to corner format
         const x = (cx - w / 2) * (originalWidth / this.inputSize);
         const y = (cy - h / 2) * (originalHeight / this.inputSize);
@@ -218,14 +218,9 @@ export class DocumentDetector {
 
       // Filter for passport class (class 0) with confidence threshold
       const documentDetections = detections.filter(
-        (det) => det.class === 0 && det.confidence > 0.5,
-      );
-
-      console.log(
-        documentDetections.map((det) => ({
-          class: det.class,
-          confidence: det.confidence,
-        })),
+        (detection) =>
+          detection.class === 0 &&
+          detection.confidence > DOCUMENT_RECOGNITION_CONFIDENCE_THRESHOLD,
       );
 
       if (documentDetections.length > 0) {

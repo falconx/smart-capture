@@ -10,6 +10,11 @@ import {
   checkDocumentInFrame,
 } from "./utils";
 import { DocumentDetector } from "./yolo-detector";
+import {
+  REQUIRED_STABLE_FRAMES,
+  MIN_CAPTURE_INTERVAL_MS,
+  INITIAL_COUNTDOWN_SECONDS,
+} from "../constants";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const cv: any;
@@ -62,7 +67,6 @@ const IdentityUpload: FC = () => {
   const lastCaptureAttemptRef = useRef<number>(0);
   const detectorRef = useRef<DocumentDetector | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
-  const REQUIRED_STABLE_FRAMES = 5;
   const [consecutiveGoodFrames, setConsecutiveGoodFrames] = useState(0);
 
   // Enumerate available cameras
@@ -99,7 +103,6 @@ const IdentityUpload: FC = () => {
         await detector.initialize();
         detectorRef.current = detector;
         setIsModelLoading(false);
-        console.log("Document detector initialized");
       } catch (error) {
         console.error("Failed to initialize document detector:", error);
         setError("Failed to load document detection model");
@@ -233,14 +236,12 @@ const IdentityUpload: FC = () => {
     const now = Date.now();
     const timeSinceLastCapture = now - lastCaptureAttemptRef.current;
 
-    // Require at least 500ms between capture attempts
-    if (timeSinceLastCapture < 500) {
+    // Require at least MIN_CAPTURE_INTERVAL_MS between capture attempts
+    if (timeSinceLastCapture < MIN_CAPTURE_INTERVAL_MS) {
       return;
     }
 
     lastCaptureAttemptRef.current = now;
-
-    console.log("capture");
 
     // Stop streaming immediately to prevent further captures
     streamingRef.current = false;
@@ -258,9 +259,6 @@ const IdentityUpload: FC = () => {
     setStatus(Status.CapturingFront);
     // Reset the last capture timestamp to allow immediate capture if needed
     lastCaptureAttemptRef.current = 0;
-    // setCountdownComplete(false);
-    // countdownCompleteRef.current = false;
-    // setCountdown(null);
     setConsecutiveGoodFrames(0);
     streamingRef.current = true;
 
@@ -285,7 +283,7 @@ const IdentityUpload: FC = () => {
 
     // Start initial countdown when video loads
     if (countdown === null && !countdownComplete) {
-      setCountdown(3);
+      setCountdown(INITIAL_COUNTDOWN_SECONDS);
     }
 
     const processFrame = async () => {

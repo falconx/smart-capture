@@ -1,6 +1,15 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 
+import {
+  BLUR_VARIANCE_THRESHOLD,
+  LIGHTING_MIN_THRESHOLD,
+  LIGHTING_MAX_THRESHOLD,
+  GLARE_BRIGHTNESS_THRESHOLD,
+  GLARE_PERCENTAGE_THRESHOLD,
+  DOCUMENT_RECOGNITION_CONFIDENCE_THRESHOLD,
+} from "../constants";
+
 export const checkBlur = (src) => {
   const gray = new cv.Mat();
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
@@ -19,7 +28,7 @@ export const checkBlur = (src) => {
   mean.delete();
   stddev.delete();
 
-  return variance > 100;
+  return variance > BLUR_VARIANCE_THRESHOLD;
 };
 
 export const checkLighting = (src) => {
@@ -29,7 +38,7 @@ export const checkLighting = (src) => {
   const mean = cv.mean(gray);
   gray.delete();
 
-  return mean[0] > 60 && mean[0] < 200;
+  return mean[0] > LIGHTING_MIN_THRESHOLD && mean[0] < LIGHTING_MAX_THRESHOLD;
 };
 
 export const checkGlare = (src) => {
@@ -37,14 +46,14 @@ export const checkGlare = (src) => {
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
   const thresh = new cv.Mat();
-  cv.threshold(gray, thresh, 240, 255, cv.THRESH_BINARY);
+  cv.threshold(gray, thresh, GLARE_BRIGHTNESS_THRESHOLD, 255, cv.THRESH_BINARY);
 
   const white = cv.countNonZero(thresh);
   const total = gray.rows * gray.cols;
   gray.delete();
   thresh.delete();
 
-  return white / total > 0.05;
+  return white / total > GLARE_PERCENTAGE_THRESHOLD;
 };
 
 import { DocumentDetector } from "./yolo-detector";
@@ -59,7 +68,10 @@ export const checkDocumentInFrame = async (
 
   try {
     const result = await detector.detect(canvas);
-    return result.detected && result.confidence > 0.5;
+    return (
+      result.detected &&
+      result.confidence > DOCUMENT_RECOGNITION_CONFIDENCE_THRESHOLD
+    );
   } catch (error) {
     console.error("Document detection error:", error);
     return false;
