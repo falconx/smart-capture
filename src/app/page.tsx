@@ -469,6 +469,7 @@ const IdentityUpload: FC = () => {
             <div className={styles.stabilityProgress}>
               <div
                 className={styles.stabilityBar}
+                key={consecutiveGoodFrames}
                 style={{
                   width: `${(consecutiveGoodFrames / REQUIRED_STABLE_FRAMES) * 100}%`,
                 }}

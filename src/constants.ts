@@ -1,7 +1,7 @@
 /**
  * How many frames must all the conditions be met before auto capturing
  */
-export const REQUIRED_STABLE_FRAMES = 5;
+export const REQUIRED_STABLE_FRAMES = 6;
 
 /**
  * Confidence needed for the model to identify an identification document (0-1)
