@@ -193,6 +193,12 @@ const IdentityUpload: FC = () => {
             !label.includes("environment"));
 
         setIsFrontCamera(!!isFront);
+
+        // Ensure onLoadedData fires even if video is already ready
+        // This handles the race condition where the video might be ready before the event listener is attached
+        if (video.readyState >= 2) {
+          onVideoReady();
+        }
       })
       .catch((err) => {
         console.error("Camera access error:", err);
