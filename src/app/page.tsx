@@ -193,14 +193,6 @@ const IdentityUpload: FC = () => {
             !label.includes("environment"));
 
         setIsFrontCamera(!!isFront);
-
-        // Manually trigger countdown start since onLoadedData may not fire reliably
-        // Use a small delay to ensure the video element is fully initialized
-        setTimeout(() => {
-          if (countdown === null && !countdownComplete) {
-            setCountdown(INITIAL_COUNTDOWN_SECONDS);
-          }
-        }, 100);
       })
       .catch((err) => {
         console.error("Camera access error:", err);
@@ -385,6 +377,25 @@ const IdentityUpload: FC = () => {
     setStatus(Status.CapturingFront);
     runChecks();
   };
+
+  // Start countdown when camera and model are ready
+  useEffect(() => {
+    if (
+      selectedCameraId &&
+      !isModelLoading &&
+      countdown === null &&
+      !countdownComplete &&
+      !capturedImage
+    ) {
+      setCountdown(INITIAL_COUNTDOWN_SECONDS);
+    }
+  }, [
+    selectedCameraId,
+    isModelLoading,
+    countdown,
+    countdownComplete,
+    capturedImage,
+  ]);
 
   // Countdown timer effect
   useEffect(() => {
