@@ -194,11 +194,13 @@ const IdentityUpload: FC = () => {
 
         setIsFrontCamera(!!isFront);
 
-        // Ensure onLoadedData fires even if video is already ready
-        // This handles the race condition where the video might be ready before the event listener is attached
-        if (video.readyState >= 2) {
-          onVideoReady();
-        }
+        // Manually trigger countdown start since onLoadedData may not fire reliably
+        // Use a small delay to ensure the video element is fully initialized
+        setTimeout(() => {
+          if (countdown === null && !countdownComplete) {
+            setCountdown(INITIAL_COUNTDOWN_SECONDS);
+          }
+        }, 100);
       })
       .catch((err) => {
         console.error("Camera access error:", err);
