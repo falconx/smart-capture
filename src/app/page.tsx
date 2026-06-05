@@ -67,6 +67,9 @@ const IdentityUpload: FC = () => {
   const detectorRef = useRef<DocumentDetector | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [consecutiveGoodFrames, setConsecutiveGoodFrames] = useState(0);
+  const cameraReadyRef = useRef(false);
+  const modelReadyRef = useRef(false);
+  const countdownStartedRef = useRef(false);
 
   // Enumerate available cameras
   useEffect(() => {
@@ -104,6 +107,10 @@ const IdentityUpload: FC = () => {
         await detector.initialize();
         detectorRef.current = detector;
         setIsModelLoading(false);
+
+        // Mark model as ready and try to start countdown
+        modelReadyRef.current = true;
+        tryStartCountdown();
       } catch (error) {
         console.error("Failed to initialize document detector:", error);
         setError("Failed to load document detection model");
@@ -193,6 +200,10 @@ const IdentityUpload: FC = () => {
             !label.includes("environment"));
 
         setIsFrontCamera(!!isFront);
+
+        // Mark camera as ready and try to start countdown
+        cameraReadyRef.current = true;
+        tryStartCountdown();
       })
       .catch((err) => {
         console.error("Camera access error:", err);
@@ -269,6 +280,23 @@ const IdentityUpload: FC = () => {
         start();
       }
     }, 0);
+  };
+
+  // Deterministic countdown trigger - called when both camera and model are ready
+  const tryStartCountdown = () => {
+    if (
+      countdownStartedRef.current ||
+      capturedImage ||
+      countdown !== null ||
+      countdownComplete
+    ) {
+      return;
+    }
+
+    if (cameraReadyRef.current && modelReadyRef.current) {
+      countdownStartedRef.current = true;
+      setCountdown(INITIAL_COUNTDOWN_SECONDS);
+    }
   };
 
   const onVideoReady = () => {
@@ -377,25 +405,6 @@ const IdentityUpload: FC = () => {
     setStatus(Status.CapturingFront);
     runChecks();
   };
-
-  // Start countdown when camera and model are ready
-  useEffect(() => {
-    if (
-      selectedCameraId &&
-      !isModelLoading &&
-      countdown === null &&
-      !countdownComplete &&
-      !capturedImage
-    ) {
-      setCountdown(INITIAL_COUNTDOWN_SECONDS);
-    }
-  }, [
-    selectedCameraId,
-    isModelLoading,
-    countdown,
-    countdownComplete,
-    capturedImage,
-  ]);
 
   // Countdown timer effect
   useEffect(() => {
