@@ -261,11 +261,14 @@ const IdentityUpload: FC = () => {
     setConsecutiveGoodFrames(0);
     streamingRef.current = true;
 
-    // Restart the video processing
-    const video = videoRef.current;
-    if (video && video.readyState >= 2) {
-      start();
-    }
+    // Use setTimeout to ensure the DOM has updated before restarting
+    setTimeout(() => {
+      const video = videoRef.current;
+
+      if (video && video.readyState >= 2) {
+        start();
+      }
+    }, 0);
   };
 
   const onVideoReady = () => {
@@ -396,7 +399,7 @@ const IdentityUpload: FC = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [countdown, setIsModelLoading]);
+  }, [countdown, isModelLoading]);
 
   const indicators: Indicator[] = [
     { name: "Sharp", value: isSharp },
@@ -428,7 +431,10 @@ const IdentityUpload: FC = () => {
         </div>
       )}
 
-      <div className={styles.container}>
+      <div
+        className={styles.container}
+        style={{ display: capturedImage ? "none" : "block" }}
+      >
         <video
           ref={videoRef}
           autoPlay
