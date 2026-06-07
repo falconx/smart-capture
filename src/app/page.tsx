@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import styles from "./page.module.css";
 import {
@@ -41,7 +41,7 @@ const svgString = `
 </svg>
 `;
 
-const IdentityUpload: FC = () => {
+export default function IdentityUpload() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
@@ -72,6 +72,7 @@ const IdentityUpload: FC = () => {
   const countdownStartedRef = useRef(false);
 
   console.log("isModelLoading", isModelLoading);
+  console.log("selectedCameraId", selectedCameraId);
   console.log("countdown", countdown);
   console.log("countdownComplete", countdownComplete);
 
@@ -88,11 +89,6 @@ const IdentityUpload: FC = () => {
         console.log("selectedCameraId before", selectedCameraId);
 
         setAvailableCameras(videoDevices);
-
-        if (!selectedCameraId) {
-          console.log("no selectedCameraId");
-          return;
-        }
 
         // Set default camera (prefer rear camera on mobile)
         if (videoDevices.length > 0 && !selectedCameraId) {
@@ -113,7 +109,7 @@ const IdentityUpload: FC = () => {
     };
 
     enumerateCameras();
-  }, [selectedCameraId]);
+  }, []);
 
   // Initialize YOLO detector
   useEffect(() => {
@@ -185,18 +181,18 @@ const IdentityUpload: FC = () => {
       stream.getTracks().forEach((track) => track.stop());
     }
 
-    // Request camera with specific device ID
-    // const constraints: MediaStreamConstraints = {
-    //   video: selectedCameraId
-    //     ? { deviceId: { exact: selectedCameraId } }
-    //     : true,
-    // };
-    console.log("calling getUserMedia");
+    const initCamera = async () => {
+      try {
+        // Request camera with specific device ID
+        const constraints: MediaStreamConstraints = {
+          video: selectedCameraId
+            ? { deviceId: { exact: selectedCameraId } }
+            : true,
+        };
+        console.log("calling getUserMedia with camera:", selectedCameraId);
 
-    navigator.mediaDevices
-      // .getUserMedia(constraints)
-      .getUserMedia({ video: true })
-      .then((stream) => {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
         console.log("getUserMedia success");
         video.srcObject = stream;
         setError(undefined);
@@ -224,23 +220,22 @@ const IdentityUpload: FC = () => {
         setIsFrontCamera(!!isFront);
 
         // Mark camera as ready and try to start countdown
-        console.log("getUserMedia success");
-        // cameraReadyRef.current = true;
+        console.log("Camera initialized successfully");
         tryStartCountdown();
-      })
-      .catch((err) => {
+      } catch (err: unknown) {
         console.error("Camera access error:", err);
 
+        const error = err as { name?: string };
         if (
-          err.name === "NotAllowedError" ||
-          err.name === "PermissionDeniedError"
+          error.name === "NotAllowedError" ||
+          error.name === "PermissionDeniedError"
         ) {
           setError(
             "Camera permission denied. Please allow camera access to continue.",
           );
         } else if (
-          err.name === "NotFoundError" ||
-          err.name === "DevicesNotFoundError"
+          error.name === "NotFoundError" ||
+          error.name === "DevicesNotFoundError"
         ) {
           setError("No camera found on this device.");
         } else {
@@ -248,7 +243,10 @@ const IdentityUpload: FC = () => {
             "Unable to access camera. Please check your device settings.",
           );
         }
-      });
+      }
+    };
+
+    initCamera();
 
     // Cleanup: Stop camera stream on unmount
     return () => {
@@ -257,7 +255,7 @@ const IdentityUpload: FC = () => {
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [selectedCameraId]);
+  }, [selectedCameraId, availableCameras]);
 
   const capture = () => {
     const canvas = canvasRef.current;
@@ -346,7 +344,7 @@ const IdentityUpload: FC = () => {
     const canvas = canvasRef.current;
     const overlay = overlayRef.current;
 
-    console.log("start", { video, canvas, overlay });
+    // console.log("start", { video, canvas, overlay });
 
     if (!video || !canvas || !overlay) return;
 
@@ -618,6 +616,4 @@ const IdentityUpload: FC = () => {
       )}
     </>
   );
-};
-
-export default IdentityUpload;
+}
