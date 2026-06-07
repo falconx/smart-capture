@@ -187,11 +187,10 @@ const IdentityUpload: FC = () => {
 
     // Request camera with specific device ID
     const constraints: MediaStreamConstraints = {
-      video: {
-        deviceId: { exact: selectedCameraId },
-      },
+      video: selectedCameraId
+        ? { deviceId: { exact: selectedCameraId } }
+        : true,
     };
-
     console.log("calling getUserMedia");
 
     navigator.mediaDevices
