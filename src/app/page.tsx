@@ -67,7 +67,7 @@ export default function IdentityUpload() {
   const detectorRef = useRef<DocumentDetector | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [consecutiveGoodFrames, setConsecutiveGoodFrames] = useState(0);
-  // const cameraReadyRef = useRef(false);
+  const cameraPermissionGrantedRef = useRef(false);
   const modelReadyRef = useRef(false);
   const countdownStartedRef = useRef(false);
 
@@ -101,6 +101,10 @@ export default function IdentityUpload() {
         // Stop the temporary stream used for permission request
         stream.getTracks().forEach((track) => track.stop());
 
+        // Mark camera permission as granted
+        cameraPermissionGrantedRef.current = true;
+        console.log("Camera permission granted");
+
         // Set default camera (prefer rear camera on mobile)
         if (videoDevices.length > 0 && !selectedCameraId) {
           const rearCamera = videoDevices.find(({ label }) =>
@@ -114,6 +118,9 @@ export default function IdentityUpload() {
             rearCamera?.deviceId || videoDevices[0].deviceId,
           );
         }
+
+        // Try to start countdown now that permissions are granted
+        tryStartCountdown();
       } catch (err) {
         console.error("Error enumerating cameras:", err);
         setError(
@@ -317,10 +324,10 @@ export default function IdentityUpload() {
     }, 0);
   };
 
-  // Deterministic countdown trigger - called when both camera and model are ready
+  // Deterministic countdown trigger - called when both camera permissions and model are ready
   const tryStartCountdown = () => {
     console.log("tryStartCountdown", {
-      // cameraReady: cameraReadyRef.current,
+      cameraPermissionGranted: cameraPermissionGrantedRef.current,
       modelReady: modelReadyRef.current,
       countdownStarted: countdownStartedRef.current,
     });
@@ -334,10 +341,7 @@ export default function IdentityUpload() {
       return;
     }
 
-    if (
-      // cameraReadyRef.current &&
-      modelReadyRef.current
-    ) {
+    if (cameraPermissionGrantedRef.current && modelReadyRef.current) {
       console.log("start coundown");
 
       countdownStartedRef.current = true;
