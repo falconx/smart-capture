@@ -71,6 +71,10 @@ const IdentityUpload: FC = () => {
   const modelReadyRef = useRef(false);
   const countdownStartedRef = useRef(false);
 
+  console.log("isModelLoading", isModelLoading);
+  console.log("countdown", countdown);
+  console.log("countdownComplete", countdownComplete);
+
   // Enumerate available cameras
   useEffect(() => {
     const enumerateCameras = async () => {
@@ -101,6 +105,8 @@ const IdentityUpload: FC = () => {
   // Initialize YOLO detector
   useEffect(() => {
     const initDetector = async () => {
+      console.log("initDetector");
+
       try {
         setIsModelLoading(true);
         const detector = new DocumentDetector();
@@ -284,6 +290,8 @@ const IdentityUpload: FC = () => {
 
   // Deterministic countdown trigger - called when both camera and model are ready
   const tryStartCountdown = () => {
+    console.log("tryStartCountdown");
+
     if (
       countdownStartedRef.current ||
       capturedImage ||
@@ -294,12 +302,16 @@ const IdentityUpload: FC = () => {
     }
 
     if (cameraReadyRef.current && modelReadyRef.current) {
+      console.log("start coundown");
+
       countdownStartedRef.current = true;
       setCountdown(INITIAL_COUNTDOWN_SECONDS);
     }
   };
 
   const onVideoReady = () => {
+    console.log("onVideoReady", { countdown, countdownComplete });
+
     if (countdown === null && !countdownComplete) {
       setCountdown(INITIAL_COUNTDOWN_SECONDS);
     }
@@ -309,6 +321,8 @@ const IdentityUpload: FC = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const overlay = overlayRef.current;
+
+    console.log("start", { video, canvas, overlay });
 
     if (!video || !canvas || !overlay) return;
 
