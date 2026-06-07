@@ -80,6 +80,14 @@ export default function IdentityUpload() {
   useEffect(() => {
     const enumerateCameras = async () => {
       try {
+        // Request camera permissions first before enumerating devices
+        // This ensures that device labels are populated and permissions are requested
+        console.log("Requesting camera permissions...");
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+
+        // Now enumerate devices - labels will be available after permission is granted
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(
           ({ kind }) => kind === "videoinput",
@@ -89,6 +97,9 @@ export default function IdentityUpload() {
         console.log("selectedCameraId before", selectedCameraId);
 
         setAvailableCameras(videoDevices);
+
+        // Stop the temporary stream used for permission request
+        stream.getTracks().forEach((track) => track.stop());
 
         // Set default camera (prefer rear camera on mobile)
         if (videoDevices.length > 0 && !selectedCameraId) {
@@ -105,6 +116,9 @@ export default function IdentityUpload() {
         }
       } catch (err) {
         console.error("Error enumerating cameras:", err);
+        setError(
+          "Camera permission denied. Please allow camera access to continue.",
+        );
       }
     };
 
