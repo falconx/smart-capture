@@ -186,15 +186,16 @@ const IdentityUpload: FC = () => {
     }
 
     // Request camera with specific device ID
-    const constraints: MediaStreamConstraints = {
-      video: selectedCameraId
-        ? { deviceId: { exact: selectedCameraId } }
-        : true,
-    };
+    // const constraints: MediaStreamConstraints = {
+    //   video: selectedCameraId
+    //     ? { deviceId: { exact: selectedCameraId } }
+    //     : true,
+    // };
     console.log("calling getUserMedia");
 
     navigator.mediaDevices
-      .getUserMedia(constraints)
+      // .getUserMedia(constraints)
+      .getUserMedia({ video: true })
       .then((stream) => {
         console.log("getUserMedia success");
         video.srcObject = stream;
