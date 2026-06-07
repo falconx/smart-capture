@@ -67,7 +67,7 @@ const IdentityUpload: FC = () => {
   const detectorRef = useRef<DocumentDetector | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [consecutiveGoodFrames, setConsecutiveGoodFrames] = useState(0);
-  const cameraReadyRef = useRef(false);
+  // const cameraReadyRef = useRef(false);
   const modelReadyRef = useRef(false);
   const countdownStartedRef = useRef(false);
 
@@ -225,7 +225,7 @@ const IdentityUpload: FC = () => {
 
         // Mark camera as ready and try to start countdown
         console.log("getUserMedia success");
-        cameraReadyRef.current = true;
+        // cameraReadyRef.current = true;
         tryStartCountdown();
       })
       .catch((err) => {
@@ -308,7 +308,7 @@ const IdentityUpload: FC = () => {
   // Deterministic countdown trigger - called when both camera and model are ready
   const tryStartCountdown = () => {
     console.log("tryStartCountdown", {
-      cameraReady: cameraReadyRef.current,
+      // cameraReady: cameraReadyRef.current,
       modelReady: modelReadyRef.current,
       countdownStarted: countdownStartedRef.current,
     });
@@ -322,7 +322,10 @@ const IdentityUpload: FC = () => {
       return;
     }
 
-    if (cameraReadyRef.current && modelReadyRef.current) {
+    if (
+      // cameraReadyRef.current &&
+      modelReadyRef.current
+    ) {
       console.log("start coundown");
 
       countdownStartedRef.current = true;
