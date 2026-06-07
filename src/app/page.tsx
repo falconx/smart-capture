@@ -182,6 +182,7 @@ const IdentityUpload: FC = () => {
     navigator.mediaDevices
       .getUserMedia(constraints)
       .then((stream) => {
+        console.log("getUserMedia success");
         video.srcObject = stream;
         setError(undefined);
 
@@ -208,6 +209,7 @@ const IdentityUpload: FC = () => {
         setIsFrontCamera(!!isFront);
 
         // Mark camera as ready and try to start countdown
+        console.log("getUserMedia success");
         cameraReadyRef.current = true;
         tryStartCountdown();
       })
@@ -290,7 +292,11 @@ const IdentityUpload: FC = () => {
 
   // Deterministic countdown trigger - called when both camera and model are ready
   const tryStartCountdown = () => {
-    console.log("tryStartCountdown");
+    console.log("tryStartCountdown", {
+      cameraReady: cameraReadyRef.current,
+      modelReady: modelReadyRef.current,
+      countdownStarted: countdownStartedRef.current,
+    });
 
     if (
       countdownStartedRef.current ||
@@ -310,7 +316,7 @@ const IdentityUpload: FC = () => {
   };
 
   const onVideoReady = () => {
-    console.log("onVideoReady", { countdown, countdownComplete });
+    console.log("video loaded", { countdown, countdownComplete });
 
     if (countdown === null && !countdownComplete) {
       setCountdown(INITIAL_COUNTDOWN_SECONDS);
