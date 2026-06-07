@@ -84,7 +84,15 @@ const IdentityUpload: FC = () => {
           ({ kind }) => kind === "videoinput",
         );
 
+        console.log("videoDevices", videoDevices);
+        console.log("selectedCameraId before", selectedCameraId);
+
         setAvailableCameras(videoDevices);
+
+        if (!selectedCameraId) {
+          console.log("no selectedCameraId");
+          return;
+        }
 
         // Set default camera (prefer rear camera on mobile)
         if (videoDevices.length > 0 && !selectedCameraId) {
@@ -93,6 +101,11 @@ const IdentityUpload: FC = () => {
           );
 
           setSelectedCameraId(rearCamera?.deviceId || videoDevices[0].deviceId);
+
+          console.log(
+            "setting camera",
+            rearCamera?.deviceId || videoDevices[0].deviceId,
+          );
         }
       } catch (err) {
         console.error("Error enumerating cameras:", err);
@@ -178,6 +191,8 @@ const IdentityUpload: FC = () => {
         deviceId: { exact: selectedCameraId },
       },
     };
+
+    console.log("calling getUserMedia");
 
     navigator.mediaDevices
       .getUserMedia(constraints)
